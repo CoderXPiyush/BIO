@@ -65,6 +65,31 @@ async def get_warning_keyboard(settings):
         [InlineKeyboardButton("ʙᴀᴄᴋ", callback_data="back"), InlineKeyboardButton("✯ ᴄʟᴏsᴇ ✯", callback_data="close")]
     ])
 
+@app.on_message(filters.command("start") & filters.group)
+async def start_group(client, message):
+    try:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✨ ꜱᴛᴀʀᴛ ᴍᴇ ɪɴ ᴘʀɪᴠᴀᴛᴇ", url=f"https://t.me/{(await client.get_me()).username}?start=start")]
+        ])
+        
+        group_start_message = (
+            "🤖 ʙɪᴏ ʟɪɴᴋ ʙʟᴏᴄᴋᴇʀ ʙᴏᴛ 🛡️\n\n"
+            "ɪ ᴄᴀɴ ᴘʀᴏᴛᴇᴄᴛ ʏᴏᴜʀ ɢʀᴏᴜᴘ ꜰʀᴏᴍ ᴜɴᴀᴜᴛʜᴏʀɪᴢᴇᴅ ʟɪɴᴋꜱ ɪɴ ᴜꜱᴇʀ ʙɪᴏꜱ!\n\n"
+            "🔹 ꜰᴇᴀᴛᴜʀᴇꜱ:\n"
+            "• ᴅᴇᴛᴇᴄᴛꜱ ʟɪɴᴋꜱ ɪɴ ɴᴇᴡ ᴜꜱᴇʀ ʙɪᴏꜱ\n"
+            "• ᴄᴏɴꜰɪɢᴜʀᴀʙʟᴇ ᴘᴜɴɪꜱʜᴍᴇɴᴛꜱ (ᴡᴀʀɴ/ᴍᴜᴛᴇ/ʙᴀɴ)\n"
+            "• ᴀᴅᴍɪɴ ᴄᴏɴᴛʀᴏʟ ᴘᴀɴᴇʟ\n\n"
+            "ᴄʟɪᴄᴋ ᴛʜᴇ ʙᴜᴛᴛᴏɴ ʙᴇʟᴏᴡ ᴛᴏ ꜱᴛᴀʀᴛ ᴍᴇ ɪɴ ᴘʀɪᴠᴀᴛᴇ ᴛᴏ ꜱᴇᴇ ꜰᴜʟʟ ꜰᴇᴀᴛᴜʀᴇꜱ!"
+        )
+        
+        await message.reply_text(
+            group_start_message,
+            reply_markup=keyboard,
+            parse_mode=enums.ParseMode.MARKDOWN
+        )
+    except Exception as e:
+        print(f"ERROR: Failed in group start handler: {e}")
+
 @app.on_message(filters.command("start") & filters.private)
 async def start(client, message):
     try:
