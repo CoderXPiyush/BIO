@@ -59,16 +59,10 @@ async def start(client, message):
 )
 
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("Support Group", url="https://t.me/itsSmartDev")],
-            [InlineKeyboardButton("Add to Group", url=f"https://t.me/{(await client.get_me()).username}?startgroup=true")]
+            [InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ 📣", url="https://t.me/UnfilteredZone")],
+            [InlineKeyboardButton("ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ ➕", url=f"https://t.me/{(await client.get_me()).username}?startgroup=true")]
         ])
-        await message.reply_text(
-            f"👋 Hello {message.from_user.first_name}!\n\n"
-            "I'm a Bio Link Monitor Bot that helps keep your groups clean by monitoring user bios.\n\n"
-            "🔹 Admins can configure me with /config in their groups\n"
-            "🔹 I can warn, mute, or ban users with suspicious links in their bios",
-            reply_markup=keyboard
-        )
+        await message.reply_text(start_message, reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
     except Exception as e:
         print(f"ERROR: Failed in start handler: {e}")
 
