@@ -51,11 +51,13 @@ async def start(client, message):
         # Store user in MongoDB
         await store_user(message.from_user.id)
         start_message = (
-            f"Hello {user_name}!\n\n"
-            "Welcome to the Bio Link Monitor Bot! I help keep Telegram groups clean by monitoring user bios for unauthorized links. "
-            "Group admins can configure me to warn, mute, or ban users who have links in their bios.\n\n"
-            "Use the buttons below to join our support group or add me to your group!"
-        )
+    f"✨ ʜᴇʟʟᴏ {user_name}! ✨\n\n"
+    "🤖 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ʙɪᴏ ʟɪɴᴋ ᴍᴏɴɪᴛᴏʀ ʙᴏᴛ! 🛡️\n"
+    "ɪ ʜᴇʟᴘ ᴋᴇᴇᴘ ᴛᴇʟᴇɢʀᴀᴍ ɢʀᴏᴜᴘꜱ ᴄʟᴇᴀɴ ʙʏ 🕵️‍♂️ ᴍᴏɴɪᴛᴏʀɪɴɢ ᴜꜱᴇʀ ʙɪᴏꜱ ꜰᴏʀ ᴜɴᴀᴜᴛʜᴏʀɪᴢᴇᴅ ʟɪɴᴋꜱ. 🔗\n\n"
+    "⚙️ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄᴏɴꜰɪɢᴜʀᴇ ᴍᴇ ᴛᴏ ⚠️ ᴡᴀʀɴ | 🔇 ᴍᴜᴛᴇ | 🚫 ʙᴀɴ ᴜꜱᴇʀꜱ ᴡɪᴛʜ ʙɪᴏ ʟɪɴᴋꜱ.\n\n"
+    "👇 ᴜꜱᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴꜱ ʙᴇʟᴏᴡ ᴛᴏ ᴊᴏɪɴ ᴏᴜʀ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ᴏʀ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ!"
+)
+
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("Support Group", url="https://t.me/itsSmartDev")],
             [InlineKeyboardButton("Add to Group", url=f"https://t.me/{(await client.get_me()).username}?startgroup=true")]
