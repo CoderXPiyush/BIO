@@ -69,15 +69,16 @@ async def get_warning_keyboard(settings):
 async def start(client, message):
     try:
         user = message.from_user
-# Store user in MongoDB
-await store_user(user.id)
-mention = user.mention if user.username else f"[{user.first_name}](tg://user?id={user.id})"
-start_message = (
-    f"✨ ʜᴇʟʟᴏ {mention}! ✨\n\n"
-    "🤖 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ʙɪᴏ ʟɪɴᴋ ʙʟᴏᴄᴋᴇʀ ʙᴏᴛ! 🛡️\n"
-    "ɪ ᴘʀᴏᴛᴇᴄᴛ ʏᴏᴜʀ ɢʀᴏᴜᴘꜱ ʙʏ ᴍᴏɴɪᴛᴏʀɪɴɢ ᴜꜱᴇʀ ʙɪᴏꜱ ꜰᴏʀ ᴜɴᴀᴜᴛʜᴏʀɪᴢᴇᴅ ʟɪɴᴋꜱ.\n\n"
-    "⚙️ ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄᴏɴꜰɪɢᴜʀᴇ ᴘᴜɴɪꜱʜᴍᴇɴᴛꜱ: ⚠️ ᴡᴀʀɴ | 🔇 ᴍᴜᴛᴇ | 🚫 ʙᴀɴ | 🗑 ᴅᴇʟᴇᴛᴇ"
-)
+        # Store user in MongoDB
+        await store_user(user.id)
+        
+        mention = user.mention if user.username else f"[{user.first_name}](tg://user?id={user.id})"
+        start_message = (
+            f"✨ ʜᴇʟʟᴏ {mention}! ✨\n\n"
+            "🤖 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ʙɪᴏ ʟɪɴᴋ ʙʟᴏᴄᴋᴇʀ ʙᴏᴛ! 🛡️\n"
+            "ɪ ᴘʀᴏᴛᴇᴄᴛ ʏᴏᴜʀ ɢʀᴏᴜᴘꜱ ʙʏ ᴍᴏɴɪᴛᴏʀɪɴɢ ᴜꜱᴇʀ ʙɪᴏꜱ ꜰᴏʀ ᴜɴᴀᴜᴛʜᴏʀɪᴢᴇᴅ ʟɪɴᴋꜱ.\n\n"
+            "⚙️ ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄᴏɴꜰɪɢᴜʀᴇ ᴘᴜɴɪꜱʜᴍᴇɴᴛꜱ: ⚠️ ᴡᴀʀɴ | 🔇 ᴍᴜᴛᴇ | 🚫 ʙᴀɴ | 🗑 ᴅᴇʟᴇᴛᴇ"
+        )
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ 📣", url="https://t.me/UnfilteredZone")],
             [InlineKeyboardButton("ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ ➕", url=f"https://t.me/{(await client.get_me()).username}?startgroup=true")]
