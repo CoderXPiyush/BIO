@@ -1,84 +1,91 @@
 from pyrogram import Client, enums
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
+from bson import Int64
 from dotenv import load_dotenv
 import os
+import pymongo.errors
 import asyncio
-from typing import Tuple
 
+# Load environment variables
 load_dotenv()
+mongo_uri = os.getenv("MONGO_URI")
 
-class BroadcastManager:
-    def __init__(self):
-        self.mongo_uri = os.getenv("MONGO_URI")
-        if not self.mongo_uri:
-            raise ValueError("MONGO_URI not found in environment variables")
-        
-        self.client = AsyncIOMotorClient(self.mongo_uri)
-        self.db = self.client["telegram_bot"]
-        self.users_collection = self.db["users"]
-        self.groups_collection = self.db["groups"]
+# MongoDB setup
+try:
+    mongo_client = MongoClient(mongo_uri)
+    db = mongo_client["telegram_bot"]
+    groups_collection = db["groups"]
+    users_collection = db["users"]
+except pymongo.errors.ConnectionFailure as e:
+    print(f"ERROR: Failed to connect to MongoDB: {str(e)}")
+    raise
+except pymongo.errors.ConfigurationError as e:
+    print(f"ERROR: Invalid MongoDB URI: {str(e)}")
+    raise
 
-    async def send_safely(self, client: Client, chat_id: int, text: str) -> bool:
-        """Safely send a message with error handling"""
-        try:
-            await client.send_message(
-                chat_id=chat_id,
-                text=text,
-                parse_mode=enums.ParseMode.HTML
-            )
-            return True
-        except (errors.UserIsBlocked, errors.ChatWriteForbidden):
-            return False
-        except errors.FloodWait as e:
-            await asyncio.sleep(e.value)
-            return await self.send_safely(client, chat_id, text)
-        except Exception as e:
-            print(f"Send error to {chat_id}: {e}")
-            return False
+async def broadcast_message(client: Client, message_text: str):
+    """
+    Broadcast a message to all users and groups in MongoDB.
+    Returns (success_count, failure_count).
+    """
+    success_count = 0
+    failure_count = 0
 
-    async def broadcast_users(self, client: Client, text: str) -> Tuple[int, int]:
-        """Broadcast to all users"""
-        success = failure = 0
-        try:
-            async for user in self.users_collection.find({"user_id": {"$exists": True}}):
-                if await self.send_safely(client, user["user_id"], text):
-                    success += 1
-                else:
-                    failure += 1
-                await asyncio.sleep(0.1)  # Rate limiting
-        except Exception as e:
-            print(f"User broadcast error: {e}")
-            failure += 1
-        return success, failure
+    # Broadcast to users
+    try:
+        for user in users_collection.find():
+            user_id = user["user_id"]
+            try:
+                await client.send_message(
+                    chat_id=user_id,
+                    text=message_text,
+                    parse_mode=enums.ParseMode.HTML
+                )
+                print(f"DEBUG: Broadcast sent to user_id {user_id}")
+                success_count += 1
+                await asyncio.sleep(0.1)  # Avoid flood limits
+            except (enums.exceptions.bad_request_400.UserIsBlocked, 
+                    enums.exceptions.bad_request_400.ChatWriteForbidden,
+                    enums.exceptions.forbidden_403.ChatWriteForbidden) as e:
+                print(f"WARNING: Failed to send to user_id {user_id}: {str(e)}")
+                failure_count += 1
+            except enums.exceptions.flood_420.FloodWait as e:
+                print(f"WARNING: FloodWait for user_id {user_id}: {e}")
+                failure_count += 1
+                await asyncio.sleep(e.value)
+            except Exception as e:
+                print(f"ERROR: Failed to send to user_id {user_id}: {str(e)}")
+                failure_count += 1
+    except pymongo.errors.PyMongoError as e:
+        print(f"ERROR: Failed to fetch users from MongoDB: {str(e)}")
+        failure_count += 1
 
-    async def broadcast_groups(self, client: Client, text: str) -> Tuple[int, int]:
-        """Broadcast to all groups"""
-        success = failure = 0
-        try:
-            async for group in self.groups_collection.find({"chat_id": {"$exists": True}}):
-                if await self.send_safely(client, group["chat_id"], text):
-                    success += 1
-                else:
-                    failure += 1
-                await asyncio.sleep(0.1)  # Rate limiting
-        except Exception as e:
-            print(f"Group broadcast error: {e}")
-            failure += 1
-        return success, failure
+    # Broadcast to groups
+    try:
+        for group in groups_collection.find():
+            chat_id = group["chat_id"]
+            try:
+                await client.send_message(
+                    chat_id=chat_id,
+                    text=message_text,
+                    parse_mode=enums.ParseMode.HTML
+                )
+                print(f"DEBUG: Broadcast sent to chat_id {chat_id}")
+                success_count += 1
+                await asyncio.sleep(0.1)  # Avoid flood limits
+            except (enums.exceptions.bad_request_400.ChatWriteForbidden,
+                    enums.exceptions.forbidden_403.ChatWriteForbidden) as e:
+                print(f"WARNING: Failed to send to chat_id {chat_id}: {str(e)}")
+                failure_count += 1
+            except enums.exceptions.flood_420.FloodWait as e:
+                print(f"WARNING: FloodWait for chat_id {chat_id}: {e}")
+                failure_count += 1
+                await asyncio.sleep(e.value)
+            except Exception as e:
+                print(f"ERROR: Failed to send to chat_id {chat_id}: {str(e)}")
+                failure_count += 1
+    except pymongo.errors.PyMongoError as e:
+        print(f"ERROR: Failed to fetch groups from MongoDB: {str(e)}")
+        failure_count += 1
 
-    async def broadcast_message(self, client: Client, text: str) -> Tuple[int, int]:
-        """Main broadcast method"""
-        user_success, user_failure = await self.broadcast_users(client, text)
-        group_success, group_failure = await self.broadcast_groups(client, text)
-        
-        return (
-            user_success + group_success,
-            user_failure + group_failure
-        )
-
-# Initialize singleton instance
-broadcast_manager = BroadcastManager()
-
-async def broadcast_message(client: Client, text: str) -> Tuple[int, int]:
-    """Public interface for broadcasting"""
-    return await broadcast_manager.broadcast_message(client, text)
+    return success_count, failure_count
