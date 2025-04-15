@@ -44,6 +44,27 @@ async def is_admin(client, chat_id, user_id):
         print(f"ERROR: Failed to check admin status: {e}")
         return False
 
+async def get_punishment_keyboard(settings):
+    """Helper function to generate punishment selection keyboard"""
+    current_punishment = settings["punishment"]
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("ᴡᴀʀɴ ⚠️", callback_data="warn")],
+        [InlineKeyboardButton("ᴍᴜᴛᴇ 🔇" if current_punishment == "mute" else "ᴍᴜᴛᴇ", callback_data="mute"),
+         InlineKeyboardButton("ʙᴀɴ ❌" if current_punishment == "ban" else "ʙᴀɴ", callback_data="ban"),
+         InlineKeyboardButton("ᴅᴇʟᴇᴛᴇ 🗑" if current_punishment == "delete" else "ᴅᴇʟᴇᴛᴇ", callback_data="delete")],
+        [InlineKeyboardButton("✯ ᴄʟᴏꜱᴇ ✯", callback_data="close")]
+    ])
+
+async def get_warning_keyboard(settings):
+    """Helper function to generate warning limit selection keyboard"""
+    current_warning_limit = settings["warning_limit"]
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("3 ✅" if current_warning_limit == 3 else "3", callback_data="warn_3"),
+         InlineKeyboardButton("4 ✅" if current_warning_limit == 4 else "4", callback_data="warn_4"),
+         InlineKeyboardButton("5 ✅" if current_warning_limit == 5 else "5", callback_data="warn_5")],
+        [InlineKeyboardButton("Back", callback_data="back"), InlineKeyboardButton("Close", callback_data="close")]
+    ])
+
 @app.on_message(filters.command("start") & filters.private)
 async def start(client, message):
     try:
@@ -77,14 +98,7 @@ async def configure(client, message):
             return
 
         settings = await get_group_settings(chat_id)
-        current_punishment = settings["punishment"]
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("ᴡᴀʀɴ ⚠️", callback_data="warn")],
-            [InlineKeyboardButton("ᴍᴜᴛᴇ 🔇" if current_punishment == "mute" else "ᴍᴜᴛᴇ", callback_data="mute"), 
-             InlineKeyboardButton("ʙᴀɴ ❌" if current_punishment == "ban" else "ʙᴀɴ", callback_data="ban"),
-             InlineKeyboardButton("ᴅᴇʟᴇᴛᴇ 🗑" if current_punishment == "delete" else "ᴅᴇʟᴇᴛᴇ", callback_data="delete")],
-            [InlineKeyboardButton("✯ ᴄʟᴏꜱᴇ ✯", callback_data="close")]
-        ])
+        keyboard = await get_punishment_keyboard(settings)
         await message.reply_text("<b>ꜱᴇʟᴇᴄᴛ ᴘᴜɴɪꜱʜᴍᴇɴᴛ ꜰᴏʀ ᴜꜱᴇʀꜱ ᴡʜᴏ ʜᴀᴠᴇ ʟɪɴᴋꜱ ɪɴ ᴛʜᴇɪʀ ʙɪᴏ ✨:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
         await message.delete()
     except Exception as e:
@@ -108,26 +122,13 @@ async def callback_handler(client, callback_query):
         settings = await get_group_settings(chat_id)
 
         if data == "back":
-            current_punishment = settings["punishment"]
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("ᴡᴀʀɴ ⚠️", callback_data="warn")],
-                [InlineKeyboardButton("ᴍᴜᴛᴇ 🔇" if current_punishment == "mute" else "ᴍᴜᴛᴇ", callback_data="mute"), 
-                 InlineKeyboardButton("ʙᴀɴ ❌" if current_punishment == "ban" else "ʙᴀɴ", callback_data="ban"),
-                 InlineKeyboardButton("ᴅᴇʟᴇᴛᴇ 🗑" if current_punishment == "delete" else "ᴅᴇʟᴇᴛᴇ", callback_data="delete")],
-                [InlineKeyboardButton("✯ ᴄʟᴏꜱᴇ ✯", callback_data="close")]
-            ])
+            keyboard = await get_punishment_keyboard(settings)
             await callback_query.message.edit_text("<b>Select punishment for users who have links in their bio:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
             await callback_query.answer()
             return
 
         if data == "warn":
-            current_warning_limit = settings["warning_limit"]
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("3 ✅" if current_warning_limit == 3 else "3", callback_data="warn_3"), 
-                 InlineKeyboardButton("4 ✅" if current_warning_limit == 4 else "4", callback_data="warn_4"),
-                 InlineKeyboardButton("5 ✅" if current_warning_limit == 5 else "5", callback_data="warn_5")],
-                [InlineKeyboardButton("Back", callback_data="back"), InlineKeyboardButton("Close", callback_data="close")]
-            ])
+            keyboard = await get_warning_keyboard(settings)
             await callback_query.message.edit_text("<b>Select the number of warnings before punishment:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
             return
 
@@ -135,27 +136,16 @@ async def callback_handler(client, callback_query):
             settings["type"] = "warn"
             settings["punishment"] = data
             await update_group_settings(chat_id, settings)
-            selected_keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("ᴡᴀʀɴ ⚠️", callback_data="warn")],
-                [InlineKeyboardButton("ᴍᴜᴛᴇ 🔇" if current_punishment == "mute" else "ᴍᴜᴛᴇ", callback_data="mute"), 
-                 InlineKeyboardButton("ʙᴀɴ ❌" if current_punishment == "ban" else "ʙᴀɴ", callback_data="ban"),
-                 InlineKeyboardButton("ᴅᴇʟᴇᴛᴇ 🗑" if current_punishment == "delete" else "ᴅᴇʟᴇᴛᴇ", callback_data="delete")],
-                [InlineKeyboardButton("✯ ᴄʟᴏꜱᴇ ✯", callback_data="close")]
-            ])
-            await callback_query.message.edit_text("<b>Punishment selected:</b>", reply_markup=selected_keyboard, parse_mode=enums.ParseMode.HTML)
+            keyboard = await get_punishment_keyboard(settings)
+            await callback_query.message.edit_text("<b>Punishment selected:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
             await callback_query.answer()
         elif data.startswith("warn_"):
             num_warnings = int(data.split("_")[1])
             settings["type"] = "warn"
             settings["warning_limit"] = num_warnings
             await update_group_settings(chat_id, settings)
-            selected_keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("3 ✅" if num_warnings == 3 else "3", callback_data="warn_3"), 
-                 InlineKeyboardButton("4 ✅" if num_warnings == 4 else "4", callback_data="warn_4"),
-                 InlineKeyboardButton("5 ✅" if num_warnings == 5 else "5", callback_data="warn_5")],
-                [InlineKeyboardButton("Back", callback_data="back"), InlineKeyboardButton("Close", callback_data="close")]
-            ])
-            await callback_query.message.edit_text(f"<b>ᴡᴀʀɴɪɴɢ ʟɪᴍɪᴛ ꜱᴇᴛ ᴛᴏ {num_warnings}</b>", reply_markup=selected_keyboard, parse_mode=enums.ParseMode.HTML)
+            keyboard = await get_warning_keyboard(settings)
+            await callback_query.message.edit_text(f"<b>ᴡᴀʀɴɪɴɢ ʟɪᴍɪᴛ ꜱᴇᴛ ᴛᴏ {num_warnings}</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
             await callback_query.answer()
         elif data.startswith("unmute_"):
             target_user_id = int(data.split("_")[1])
@@ -163,9 +153,9 @@ async def callback_handler(client, callback_query):
             target_user_name = f"{target_user.first_name} {target_user.last_name}" if target_user.last_name else target_user.first_name
             try:
                 await client.restrict_chat_member(chat_id, target_user_id, ChatPermissions(can_send_messages=True))
-                await callback_query.message.edit(f"{target_user_name} [<code>{target_user_id}</code>] has been unmuted", parse_mode=enums.ParseMode.HTML)
+                await callback_query.message.edit_text(f"{target_user_name} [<code>{target_user_id}</code>] has been unmuted", parse_mode=enums.ParseMode.HTML)
             except errors.ChatAdminRequired:
-                await callback_query.message.edit("ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴜɴᴍᴜᴛᴇ ᴜꜱᴇʀꜱ 🥺")
+                await callback_query.message.edit_text("ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴜɴᴍᴜᴛᴇ ᴜꜱᴇʀꜱ 🥺")
             await callback_query.answer()
         elif data.startswith("unban_"):
             target_user_id = int(data.split("_")[1])
@@ -173,9 +163,9 @@ async def callback_handler(client, callback_query):
             target_user_name = f"{target_user.first_name} {target_user.last_name}" if target_user.last_name else target_user.first_name
             try:
                 await client.unban_chat_member(chat_id, target_user_id)
-                await callback_query.message.edit(f"{target_user_name} [<code>{target_user_id}</code>] has been unbanned", parse_mode=enums.ParseMode.HTML)
+                await callback_query.message.edit_text(f"{target_user_name} [<code>{target_user_id}</code>] has been unbanned", parse_mode=enums.ParseMode.HTML)
             except errors.ChatAdminRequired:
-                await callback_query.message.edit("ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴜɴʙᴀɴ ᴜꜱᴇʀꜱ 🥺")
+                await callback_query.message.edit_text("ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴜɴʙᴀɴ ᴜꜱᴇʀꜱ 🥺")
             await callback_query.answer()
     except Exception as e:
         print(f"ERROR: Failed in callback_handler: {e}")
@@ -190,7 +180,7 @@ async def bot_added_to_group(client, message):
             if member.id == bot_id:
                 settings = await get_group_settings(chat_id)
                 await update_group_settings(chat_id, settings)
-                await message.reply_text("ᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ! ɪ'ʟʟ ᴍᴏɴɪᴛᴏʀ ᴜꜱᴇʀ ʙɪᴏꜱ ꜰᴏʀ ʟɪɴᴋꜱ. ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄᴏɴꜰɪɢᴜʀᴇ ᴘᴜɴɪꜱʜᴍᴇɴᴛꜱ ᴡɪᴛʜ /config ")
+                await message.reply_text("ᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ! ɪ'ʟʟ ᴍᴏɴɪᴛᴏʀ ᴜꜱᴇʀ ʙɪᴏꜱ ꜰᴏʀ ʟɪɴᴋꜱ. ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄᴏɴꜰɪɢᴜʀᴇ ᴘᴜɴɪꜱʜᴍᴇɴᴛꜱ ᴡɪᴛʜ /config")
     except Exception as e:
         print(f"ERROR: Failed in bot_added_to_group: {e}")
 
