@@ -1,5 +1,6 @@
 import re
 from pyrogram import Client
+from pyrogram import enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 from pyrogram import errors
 
