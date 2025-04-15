@@ -110,12 +110,12 @@ async def callback_handler(client, callback_query):
         if data == "back":
             current_punishment = settings["punishment"]
             keyboard = InlineKeyboardMarkup([
-              [InlineKeyboardButton("ᴡᴀʀɴ ⚠️", callback_data="warn")],
-              [InlineKeyboardButton("ᴍᴜᴛᴇ 🔇" if current_punishment == "mute" else "ᴍᴜᴛᴇ", callback_data="mute"), 
-               InlineKeyboardButton("ʙᴀɴ ❌" if current_punishment == "ban" else "ʙᴀɴ", callback_data="ban"),
-               InlineKeyboardButton("ᴅᴇʟᴇᴛᴇ 🗑" if current_punishment == "delete" else "ᴅᴇʟᴇᴛᴇ", callback_data="delete")],
-              [InlineKeyboardButton("✯ ᴄʟᴏꜱᴇ ✯", callback_data="close")]
-          ])
+               [InlineKeyboardButton("ᴡᴀʀɴ ⚠️", callback_data="warn")],
+               [InlineKeyboardButton("ᴍᴜᴛᴇ 🔇" if current_punishment == "mute" else "ᴍᴜᴛᴇ", callback_data="mute"), 
+                InlineKeyboardButton("ʙᴀɴ ❌" if current_punishment == "ban" else "ʙᴀɴ", callback_data="ban"),
+                InlineKeyboardButton("ᴅᴇʟᴇᴛᴇ 🗑" if current_punishment == "delete" else "ᴅᴇʟᴇᴛᴇ", callback_data="delete")],
+               [InlineKeyboardButton("✯ ᴄʟᴏꜱᴇ ✯", callback_data="close")]
+           ])
             await callback_query.message.edit_text("<b>Select punishment for users who have links in their bio:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
             await callback_query.answer()
             return
