@@ -49,7 +49,7 @@ default_punishment = "mute"
 default_punishment_set = {"type": "warn", "warning_limit": default_warning_limit, "punishment": default_punishment}
 
 async def get_group_settings(chat_id):
-    if not db:  # Ensure DB is initialized
+    if db is None:  # Explicitly check for None
         await initialize_db()
     try:
         group = await groups_collection.find_one({"chat_id": Int64(chat_id)})
@@ -65,7 +65,7 @@ async def get_group_settings(chat_id):
         return default_punishment_set
 
 async def update_group_settings(chat_id, settings):
-    if not db:  # Ensure DB is initialized
+    if db is None:  # Explicitly check for None
         await initialize_db()
     required_keys = ["type", "warning_limit", "punishment"]
     if not all(key in settings for key in required_keys):
@@ -89,7 +89,7 @@ async def update_group_settings(chat_id, settings):
         logger.error(f"Failed to update group settings for chat_id {chat_id}: {e}")
 
 async def store_user(user_id):
-    if not db:  # Ensure DB is initialized
+    if db is None:  # Explicitly check for None
         await initialize_db()
     try:
         await users_collection.update_one(
@@ -105,13 +105,13 @@ async def store_user(user_id):
         logger.error(f"Failed to store user_id {user_id}: {e}")
 
 async def get_warnings(user_id, chat_id):
-    if not db:  # Ensure DB is initialized
+    if db is None:  # Explicitly check for None
         await initialize_db()
     result = await warnings_collection.find_one({"user_id": Int64(user_id), "chat_id": Int64(chat_id)})
     return result["count"] if result else 0
 
 async def update_warnings(user_id, chat_id, count):
-    if not db:  # Ensure DB is initialized
+    if db is None:  # Explicitly check for None
         await initialize_db()
     try:
         await warnings_collection.update_one(
