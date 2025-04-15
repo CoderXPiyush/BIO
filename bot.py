@@ -1,3 +1,5 @@
+import asyncio
+import database
 from pyrogram import Client, filters, enums, errors
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 from database import get_group_settings, update_group_settings, store_user
@@ -5,7 +7,6 @@ from punishments import apply_punishment
 from dotenv import load_dotenv
 import os
 from asyncio import sleep
-from functools import lru_cache
 import time
 from collections import defaultdict
 
@@ -49,11 +50,6 @@ async def is_admin(client, chat_id, user_id):
         print(f"ERROR: Failed to check admin status: {e}")
         return False
 
-@lru_cache(maxsize=1000)
-def get_cached_user_info(client, user_id):
-    user = client.get_chat(user_id)
-    return (user.bio if user.bio else "", user.username or "", user.first_name or "", user.last_name or "")
-
 request_timestamps = defaultdict(list)
 active_users = set()
 
@@ -66,7 +62,7 @@ async def start(client, message):
             f"✨ ʜᴇʟʟᴏ {user_name}! ✨\n\n"
             "🤖 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ʙɪᴏ ʟɪɴᴋ ᴍᴏɴɪᴛᴏʀ ʙᴏᴛ! 🛡️\n"
             "ɪ ʜᴇʟᴘ ᴋᴇᴇᴘ ᴛᴇʟᴇɢʀᴀᴍ ɢʀᴏᴜᴘꜱ ᴄʟᴇᴀɴ ʙʏ 🕵️‍♂️ ᴍᴏɴɪᴛᴏʀɪɴɢ ᴜꜱᴇʀ ʙɪᴏꜱ ꜰᴏʀ ᴜɴᴀᴜᴛʜᴏʀɪᴢᴇᴅ ʟɪɴᴋꜱ. 🔗\n\n"
-            "⚙️ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄᴏɴꜰɪɢᴜʀᴇ ᴍᴇ ᴛᴏ ⚠️ ᴡᴀʀɴ | 🔇 ᴍᴜᴛᴇ | 🚫 ʙᴀɴ ᴜꜱᴇʀꜱ ᴡɪᴛʜ ʙɪᴏ ʟɪɴᴋꜱ.\n\n"
+            "⚙️ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄᴏɴᴄɪɢᴜʀᴇ ᴍᴇ ᴛᴏ ⚠️ ᴡᴀʀɴ | 🔇 ᴍᴜᴛᴇ | 🚫 ʙᴀɴ ᴜꜱᴇʀꜱ ᴡɪᴛʜ ʙɪᴏ ʟɪɴᴋꜱ.\n\n"
             "👇 ᴜꜱᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴꜱ ʙᴇʟᴏᴡ ᴛᴏ ᴊᴏɪɴ ᴏᴜʀ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ᴏʀ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ!"
         )
         keyboard = InlineKeyboardMarkup([
@@ -225,19 +221,13 @@ async def check_bio(client, message):
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                # Use cached user info if available, refresh if too old
-                bio, username, first_name, last_name = get_cached_user_info(client, user_id)
-                if time.time() - get_cached_user_info.cache_info().hits > 300:
-                    get_cached_user_info.cache_clear()
-                    user_full = await client.get_chat(user_id)
-                    bio = user_full.bio if user_full.bio else ""
-                    username = user_full.username or ""
-                    first_name = user_full.first_name or ""
-                    last_name = user_full.last_name or ""
-
-                user_name = f"@{username} [<code>{user_id}</code>]" if username else \
-                           f"{first_name} {last_name} [<code>{user_id}</code>]" if last_name else \
-                           f"{first_name} [<code>{user_id}</code>]"
+                # Fetch user info asynchronously with await
+                user_full = await client.get_chat(user_id)  # Ensure await is present
+                bio = user_full.bio if user_full.bio else ""
+                if user_full.username:
+                    user_name = f"@{user_full.username} [<code>{user_id}</code>]"
+                else:
+                    user_name = f"{user_full.first_name} {user_full.last_name} [<code>{user_id}</code>]" if user_full.last_name else f"{user_full.first_name} [<code>{user_id}</code>]"
                 settings = await get_group_settings(chat_id)
                 await apply_punishment(client, message, user_id, user_name, bio, settings)
                 break
@@ -258,6 +248,8 @@ async def check_bio(client, message):
 
 if __name__ == "__main__":
     print("DEBUG: Starting bot...")
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(database.initialize_db())  # Initialize DB in the event loop
     try:
         app.run()
     except errors.AuthKeyUnregistered:
