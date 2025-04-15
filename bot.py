@@ -123,13 +123,13 @@ async def callback_handler(client, callback_query):
 
         if data == "back":
             keyboard = await get_punishment_keyboard(settings)
-            await callback_query.message.edit_text("<b>Select punishment for users who have links in their bio:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
+            await callback_query.message.edit_text("<b>ꜱᴇʟᴇᴄᴛ ᴘᴜɴɪꜱʜᴍᴇɴᴛ ꜰᴏʀ ᴜꜱᴇʀꜱ ᴡʜᴏ ʜᴀᴠᴇ ʟɪɴᴋꜱ ɪɴ ᴛʜᴇɪʀ ʙɪᴏ✨:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
             await callback_query.answer()
             return
 
         if data == "warn":
             keyboard = await get_warning_keyboard(settings)
-            await callback_query.message.edit_text("<b>Select the number of warnings before punishment:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
+            await callback_query.message.edit_text("<b>ꜱᴇʟᴇᴄᴛ ᴛʜᴇ ɴᴜᴍʙᴇʀ ᴏꜰ ᴡᴀʀɴɪɴɢꜱ ʙᴇꜰᴏʀᴇ ᴘᴜɴɪꜱʜᴍᴇɴᴛ:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
             return
 
         if data in ["mute", "ban", "delete"]:
@@ -137,7 +137,7 @@ async def callback_handler(client, callback_query):
             settings["punishment"] = data
             await update_group_settings(chat_id, settings)
             keyboard = await get_punishment_keyboard(settings)
-            await callback_query.message.edit_text("<b>Punishment selected:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
+            await callback_query.message.edit_text("<b>ᴘᴜɴɪꜱʜᴍᴇɴᴛ ꜱᴇʟᴇᴄᴛᴇᴅ:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
             await callback_query.answer()
         elif data.startswith("warn_"):
             num_warnings = int(data.split("_")[1])
