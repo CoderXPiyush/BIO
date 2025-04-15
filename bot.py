@@ -2,6 +2,7 @@ from pyrogram import Client, filters, enums, errors
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 from database import get_group_settings, update_group_settings, store_user
 from punishments import apply_punishment, warnings
+from promo import broadcast_message
 from dotenv import load_dotenv
 import os
 
@@ -12,11 +13,13 @@ load_dotenv()
 print(f"DEBUG: API_ID = {os.getenv('API_ID')}")
 print(f"DEBUG: API_HASH = {os.getenv('API_HASH')}")
 print(f"DEBUG: BOT_TOKEN = {os.getenv('BOT_TOKEN')}")
+print(f"DEBUG: OWNER_ID = {os.getenv('OWNER_ID')}")
 
 # User Client setup
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
+owner_id = os.getenv("OWNER_ID")
 
 # Validate credentials
 if not all([api_id, api_hash, bot_token]):
@@ -27,6 +30,12 @@ try:
     api_id = int(api_id)  # Ensure API_ID is an integer
 except ValueError:
     print("ERROR: API_ID must be an integer")
+    exit(1)
+
+try:
+    owner_id = int(owner_id) if owner_id else None  # Allow OWNER_ID to be optional for other functionality
+except ValueError:
+    print("ERROR: OWNER_ID must be an integer")
     exit(1)
 
 app = Client("my_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
@@ -63,6 +72,29 @@ async def start(client, message):
         await message.reply_text(start_message, reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
     except Exception as e:
         print(f"ERROR: Failed in start handler: {e}")
+
+@app.on_message(filters.command("broadcast") & filters.private)
+async def broadcast(client, message):
+    try:
+        if not owner_id or str(message.from_user.id) != str(owner_id):
+            await message.reply_text("❌ Only the bot owner can use this command.", parse_mode=enums.ParseMode.HTML)
+            return
+
+        if len(message.command) < 2:
+            await message.reply_text("Please provide a message to broadcast.\nExample: /broadcast Hello everyone!", parse_mode=enums.ParseMode.HTML)
+            return
+
+        broadcast_text = " ".join(message.command[1:])
+        await message.reply_text("Starting broadcast...", parse_mode=enums.ParseMode.HTML)
+        
+        success_count, failure_count = await broadcast_message(client, broadcast_text)
+        await message.reply_text(
+            f"Broadcast completed.\nSuccess: {success_count}\nFailures: {failure_count}",
+            parse_mode=enums.ParseMode.HTML
+        )
+    except Exception as e:
+        print(f"ERROR: Failed in broadcast handler: {e}")
+        await message.reply_text("An error occurred during broadcast.", parse_mode=enums.ParseMode.HTML)
 
 @app.on_message(filters.group & filters.command("config"))
 async def configure(client, message):
