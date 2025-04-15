@@ -1,6 +1,6 @@
 from pyrogram import Client, filters, enums, errors
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
-from database import get_group_settings, update_group_settings, store_user, check_user_membership, update_user_membership
+from database import get_group_settings, update_group_settings, store_user
 from punishments import apply_punishment, warnings
 from dotenv import load_dotenv
 import os
@@ -17,9 +17,6 @@ print(f"DEBUG: BOT_TOKEN = {os.getenv('BOT_TOKEN')}")
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
-
-# Must-join channel or group ID
-MUST_JOIN_CHANNEL = "@UnfilteredZone"  # Replace with your channel/group ID
 
 # Validate credentials
 if not all([api_id, api_hash, bot_token]):
@@ -47,52 +44,12 @@ async def is_admin(client, chat_id, user_id):
         print(f"ERROR: Failed to check admin status: {e}")
         return False
 
-async def check_telegram_membership(client, user_id):
-    try:
-        member = await client.get_chat_member(MUST_JOIN_CHANNEL, user_id)
-        return member.status in [
-            enums.ChatMemberStatus.OWNER,
-            enums.ChatMemberStatus.ADMINISTRATOR,
-            enums.ChatMemberStatus.MEMBER
-        ]
-    except (errors.UserNotParticipant, errors.ChatAdminRequired):
-        return False
-    except Exception as e:
-        print(f"ERROR: Failed to check Telegram membership: {e}")
-        return False
-
 @app.on_message(filters.command("start") & filters.private)
 async def start(client, message):
     try:
-        user_id = message.from_user.id
         user_name = message.from_user.first_name
-
-        # Check membership status in database
-        is_member = await check_user_membership(user_id)
-        
-        # Verify actual Telegram membership
-        telegram_member = await check_telegram_membership(client, user_id)
-        
-        if not telegram_member:
-            # Update database to reflect non-membership
-            await update_user_membership(user_id, False)
-            join_message = (
-                f"✨ ʜᴇʟʟᴏ {user_name}! ✨\n\n"
-                "🔒 ᴛᴏ ᴜꜱᴇ ᴛʜɪꜱ ʙᴏᴛ, ʏᴏᴜ ᴍᴜꜱᴛ ᴊᴏɪɴ ᴏᴜʀ ᴏꜰꜰɪᴄɪᴀʟ ᴄʜᴀɴɴᴇʟ/ɢʀᴏᴜᴘ ꜰɪʀꜱᴛ!\n\n"
-                f"📣 ᴘʟᴇᴀꜱᴇ ᴊᴏɪɴ {MUST_JOIN_CHANNEL} ᴀɴᴅ ᴛʜᴇɴ ᴄᴏᴍᴇ ʙᴀᴄᴋ ᴀɴᴅ ᴛʏᴘᴇ /start ᴀɢᴀɪɴ."
-            )
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("📢 ᴊᴏɪɴ ɴᴏᴡ", url=f"https://t.me/{MUST_JOIN_CHANNEL.lstrip('@')}")]
-            ])
-            await message.reply_text(join_message, reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
-            return
-
-        # Update database if user has joined
-        if not is_member:
-            await update_user_membership(user_id, True)
-
         # Store user in MongoDB
-        await store_user(user_id)
+        await store_user(message.from_user.id)
         start_message = (
             f"✨ ʜᴇʟʟᴏ {user_name}! ✨\n\n"
             "🤖 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ʙɪᴏ ʟɪɴᴋ ᴍᴏɴɪᴛᴏʀ ʙᴏᴛ! 🛡️\n"
