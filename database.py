@@ -80,38 +80,10 @@ async def store_user(user_id):
             {"user_id": Int64(user_id)},
             {"$set": {
                 "user_id": Int64(user_id),
-                "started_at": datetime.utcnow(),
-                "is_channel_member": False  # Default to False until verified
+                "started_at": datetime.utcnow()
             }},
             upsert=True
         )
         print(f"DEBUG: Stored user_id {user_id}")
     except pymongo.errors.PyMongoError as e:
         print(f"ERROR: Failed to store user_id {user_id}: {str(e)}")
-
-async def check_user_membership(user_id):
-    """Check if user is marked as a member of the required channel in MongoDB."""
-    try:
-        user = users_collection.find_one({"user_id": Int64(user_id)})
-        if user and user.get("is_channel_member", False):
-            return True
-        return False
-    except pymongo.errors.PyMongoError as e:
-        print(f"ERROR: Failed to check membership for user_id {user_id}: {str(e)}")
-        return False
-
-async def update_user_membership(user_id, is_member):
-    """Update user's channel membership status in MongoDB."""
-    try:
-        users_collection.update_one(
-            {"user_id": Int64(user_id)},
-            {"$set": {
-                "user_id": Int64(user_id),
-                "is_channel_member": is_member,
-                "membership_updated_at": datetime.utcnow()
-            }},
-            upsert=True
-        )
-        print(f"DEBUG: Updated membership status for user_id {user_id} to {is_member}")
-    except pymongo.errors.PyMongoError as e:
-        print(f"ERROR: Failed to update membership for user_id {user_id}: {str(e)}")
