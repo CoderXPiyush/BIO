@@ -57,7 +57,7 @@ async def start(client, message):
             "Use the buttons below to join our support group or add me to your group!"
         )
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("Support Group", url="https://t.me/itsSmartDev")],
+            [InlineKeyboardButton("Support", url="https://t.me/UnfilteredZone")],
             [InlineKeyboardButton("Add to Group", url=f"https://t.me/{(await client.get_me()).username}?startgroup=true")]
         ])
         await message.reply_text(start_message, reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
