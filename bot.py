@@ -8,10 +8,22 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
+# Debug: Print environment variables
+print(f"DEBUG: API_ID = {os.getenv('API_ID')}")
+print(f"DEBUG: API_HASH = {os.getenv('API_HASH')}")
+print(f"DEBUG: BOT_TOKEN = {os.getenv('BOT_TOKEN')}")
+print(f"DEBUG: MONGO_URI = {os.getenv('MONGO_URI')}")
+
 # User Client setup
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
+
+# Debug: Validate credentials before initializing
+if not all([api_id, api_hash, bot_token]):
+    print("ERROR: One or more required environment variables (API_ID, API_HASH, BOT_TOKEN) are missing or empty.")
+    exit(1)
+
 app = Client("my_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
 async def is_admin(client, chat_id, user_id):
@@ -172,4 +184,8 @@ async def check_bio(client, message):
     await apply_punishment(client, message, user_id, user_name, bio, settings)
 
 if __name__ == "__main__":
-    app.run()
+    print("DEBUG: Starting bot...")
+    try:
+        app.run()
+    except Exception as e:
+        print(f"ERROR: Failed to start bot: {str(e)}")
