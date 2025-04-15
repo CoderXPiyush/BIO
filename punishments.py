@@ -16,7 +16,7 @@ async def apply_punishment(client: Client, message, user_id: int, user_name: str
         try:
             await message.delete()
         except errors.MessageDeleteForbidden:
-            await message.reply_text("Please grant me delete permission.")
+            await message.reply_text("ᴘʟᴇᴀꜱᴇ ɢʀᴀɴᴛ ᴍᴇ ᴅᴇʟᴇᴛᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ 🗑")
             return
 
         if settings["type"] == "warn":
@@ -24,59 +24,59 @@ async def apply_punishment(client: Client, message, user_id: int, user_name: str
                 warnings[user_id] = 0
             warnings[user_id] += 1
             sent_msg = await message.reply_text(
-                f"{user_name} please remove any links from your bio. Warned {warnings[user_id]}/{settings['warning_limit']}",
+                f"{user_name} ᴘʟᴇᴀꜱᴇ ʀᴇᴍᴏᴠᴇ ᴀɴʏ ʟɪɴᴋꜱ 🔗 ꜰʀᴏᴍ ʏᴏᴜʀ ʙɪᴏ. ⚠️ᴡᴀʀɴᴇᴅ {warnings[user_id]}/{settings['warning_limit']}",
                 parse_mode=enums.ParseMode.HTML
             )
             if warnings[user_id] >= settings["warning_limit"]:
                 try:
                     if settings["punishment"] == "mute":
                         await client.restrict_chat_member(message.chat.id, user_id, ChatPermissions())
-                        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Unmute ✅", callback_data=f"unmute_{user_id}")]])
+                        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("ᴜɴᴍᴜᴛᴇ 🫰🏻", callback_data=f"unmute_{user_id}")]])
                         await sent_msg.edit(
-                            f"{user_name} has been 🔇 muted for [ Link In Bio ].",
+                            f"{user_name} ʜᴀꜱ ʙᴇᴇɴ 🔇 ᴍᴜᴛᴇᴅ ꜰᴏʀ [ ʟɪɴᴋ ɪɴ ʙɪᴏ ].",
                             reply_markup=keyboard,
                             parse_mode=enums.ParseMode.HTML
                         )
                     elif settings["punishment"] == "ban":
                         await client.ban_chat_member(message.chat.id, user_id)
-                        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Unban ✅", callback_data=f"unban_{user_id}")]])
+                        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("ᴜɴʙᴀɴ 🪼", callback_data=f"unban_{user_id}")]])
                         await sent_msg.edit(
-                            f"{user_name} has been 🔨 banned for [ Link In Bio ].",
+                            f"{user_name} ʜᴀꜱ ʙᴇᴇɴ 🔨 ʙᴀɴɴᴇᴅ ꜰᴏʀ [ ʟɪɴᴋ ɪɴ ʙɪᴏ ].",
                             reply_markup=keyboard,
                             parse_mode=enums.ParseMode.HTML
                         )
                     elif settings["punishment"] == "delete":
                         await sent_msg.edit(
-                            f"{user_name}'s messages are being deleted due to a link in their bio.",
+                            f"{user_name}'ꜱ ᴍᴇꜱꜱᴀɢᴇꜱ ᴀʀᴇ ʙᴇɪɴɢ ᴅᴇʟᴇᴛᴇᴅ ᴅᴜᴇ ᴛᴏ ᴀ ʟɪɴᴋ ɪɴ ᴛʜᴇɪʀ ʙɪᴏ.",
                             parse_mode=enums.ParseMode.HTML
                         )
                 except errors.ChatAdminRequired:
-                    await sent_msg.edit(f"I don't have permission to {settings['punishment']} users.")
+                    await sent_msg.edit(f"ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ {settings['punishment']} ᴜꜱᴇʀꜱ.")
         elif settings["punishment"] == "mute":
             try:
                 await client.restrict_chat_member(message.chat.id, user_id, ChatPermissions())
                 keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Unmute", callback_data=f"unmute_{user_id}")]])
                 await message.reply_text(
-                    f"{user_name} has been 🔇 muted for [ Link In Bio ].",
+                    f"{user_name} ʜᴀꜱ ʙᴇᴇɴ 🔇 ᴍᴜᴛᴇᴅ ꜰᴏʀ [ ʟɪɴᴋ ɪɴ ʙɪᴏ ].",
                     reply_markup=keyboard,
                     parse_mode=enums.ParseMode.HTML
                 )
             except errors.ChatAdminRequired:
-                await message.reply_text("I don't have permission to mute users.")
+                await message.reply_text("ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴍᴜᴛᴇ ᴜꜱᴇʀꜱ.")
         elif settings["punishment"] == "ban":
             try:
                 await client.ban_chat_member(message.chat.id, user_id)
                 keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Unban", callback_data=f"unban_{user_id}")]])
                 await message.reply_text(
-                    f"{user_name} has been 🔨 banned for [ Link In Bio ].",
+                    f"{user_name} ʜᴀꜱ ʙᴇᴇɴ 🔨 ʙᴀɴɴᴇᴅ ꜰᴏʀ [ ʟɪɴᴋ ɪɴ ʙɪᴏ ].",
                     reply_markup=keyboard,
                     parse_mode=enums.ParseMode.HTML
                 )
             except errors.ChatAdminRequired:
-                await message.reply_text("I don't have permission to ban users.")
+                await message.reply_text("ɪ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ʙᴀɴ ᴜꜱᴇʀꜱ.")
         elif settings["punishment"] == "delete":
             await message.reply_text(
-                f"{user_name}'s messages are being deleted due to a link in their bio.",
+                f"{user_name}'ꜱ ᴍᴇꜱꜱᴀɢᴇꜱ ᴀʀᴇ ʙᴇɪɴɢ ᴅᴇʟᴇᴛᴇᴅ ᴅᴜᴇ ᴛᴏ ᴀ ʟɪɴᴋ ɪɴ ᴛʜᴇɪʀ ʙɪᴏ.",
                 parse_mode=enums.ParseMode.HTML
             )
     else:
