@@ -2,10 +2,20 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from database import get_group_settings, db
 from bson import Int64
+import os
 import logging
+from asyncio import sleep
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+async def broadcast_start(client: Client, message):
+    """Handle the /broadcast command to initiate the broadcast process."""
+    await broadcast_command(client, message)
+
+async def broadcast_callback_handler(client: Client, callback_query):
+    """Handle callback queries for broadcast options."""
+    await broadcast_callback(client, callback_query)
 
 async def broadcast_command(client: Client, message):
     """Handle the /broadcast command to send messages to users and groups."""
@@ -14,26 +24,29 @@ async def broadcast_command(client: Client, message):
 
     # Check if the user is an admin in the current chat (for group) or the bot owner (for private)
     is_admin = False
-    if await client.get_chat_member(chat_id, user_id).status in ["administrator", "creator"]:
+    try:
+        member = await client.get_chat_member(chat_id, user_id)
+        if member.status in ["administrator", "creator"]:
+            is_admin = True
+    except Exception as e:
+        logger.warning(f"Failed to check admin status for chat_id {chat_id}: {e}")
+    if message.chat.type == "private" and user_id == int(os.getenv("OWNER_ID", 0)):  # Replace with your bot owner's ID
         is_admin = True
-    elif message.chat.type == "private" and user_id == int(os.getenv("OWNER_ID", 0)):  # Replace with your bot owner's ID
-        is_admin = True
-    else:
+    if not is_admin:
         await message.reply_text("<b>❌ You are not authorized to use this command.</b>", parse_mode=enums.ParseMode.HTML)
         return
 
-    if is_admin:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("To Users ✅", callback_data="broadcast_users"),
-             InlineKeyboardButton("To Groups ✅", callback_data="broadcast_groups"),
-             InlineKeyboardButton("To All ✅", callback_data="broadcast_all")],
-            [InlineKeyboardButton("Cancel", callback_data="broadcast_cancel")]
-        ])
-        await message.reply_text(
-            "<b>🔊 Broadcast Message</b>\n\nSelect the target for your broadcast:\n- Users: Send to all users who started the bot.\n- Groups: Send to all groups where the bot is added.\n- All: Send to both users and groups.",
-            reply_markup=keyboard,
-            parse_mode=enums.ParseMode.HTML
-        )
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("To Users ✅", callback_data="broadcast_users"),
+         InlineKeyboardButton("To Groups ✅", callback_data="broadcast_groups"),
+         InlineKeyboardButton("To All ✅", callback_data="broadcast_all")],
+        [InlineKeyboardButton("Cancel", callback_data="broadcast_cancel")]
+    ])
+    await message.reply_text(
+        "<b>🔊 Broadcast Message</b>\n\nSelect the target for your broadcast:\n- Users: Send to all users who started the bot.\n- Groups: Send to all groups where the bot is added.\n- All: Send to both users and groups.",
+        reply_markup=keyboard,
+        parse_mode=enums.ParseMode.HTML
+    )
 
 async def broadcast_callback(client: Client, callback_query):
     """Handle callback queries for broadcast options."""
@@ -43,14 +56,14 @@ async def broadcast_callback(client: Client, callback_query):
 
     # Verify admin/owner again
     is_admin = False
-    if await client.get_chat_member(chat_id, user_id).status in ["administrator", "creator"]:
+    try:
+        member = await client.get_chat_member(chat_id, user_id)
+        if member.status in ["administrator", "creator"]:
+            is_admin = True
+    except Exception as e:
+        logger.warning(f"Failed to check admin status for callback in chat_id {chat_id}: {e}")
+    if callback_query.message.chat.type == "private" and user_id == int(os.getenv("OWNER_ID", 0)):
         is_admin = True
-    elif callback_query.message.chat.type == "private" and user_id == int(os.getenv("OWNER_ID", 0)):
-        is_admin = True
-    else:
-        await callback_query.answer("❌ You are not authorized", show_alert=True)
-        return
-
     if not is_admin:
         await callback_query.answer("❌ You are not authorized", show_alert=True)
         return
