@@ -19,7 +19,7 @@ api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
 
 # Must-join channel or group ID
-MUST_JOIN_CHANNEL = "@YourMustJoinChannel"  # Replace with your channel/group ID
+MUST_JOIN_CHANNEL = "@UnfilteredZone"  # Replace with your channel/group ID
 
 # Validate credentials
 if not all([api_id, api_hash, bot_token]):
