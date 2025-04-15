@@ -1,14 +1,18 @@
 from pyrogram import Client, filters, enums, errors
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 from database import get_group_settings, update_group_settings, store_user
-from punishments import apply_punishment, warnings
+from punishments import apply_punishment
 from dotenv import load_dotenv
 import os
+from asyncio import sleep
+from functools import lru_cache
+import time
+from collections import defaultdict
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Debug: Print environment variables
+# Debug: Print environment variables (disable in production)
 print(f"DEBUG: API_ID = {os.getenv('API_ID')}")
 print(f"DEBUG: API_HASH = {os.getenv('API_HASH')}")
 print(f"DEBUG: BOT_TOKEN = {os.getenv('BOT_TOKEN')}")
@@ -39,25 +43,32 @@ async def is_admin(client, chat_id, user_id):
         return False
     except errors.FloodWait as e:
         print(f"WARNING: FloodWait in is_admin: {e}")
-        return False
+        await sleep(e.value)
+        return await is_admin(client, chat_id, user_id)  # Retry
     except Exception as e:
         print(f"ERROR: Failed to check admin status: {e}")
         return False
+
+@lru_cache(maxsize=1000)
+def get_cached_user_info(client, user_id):
+    user = client.get_chat(user_id)
+    return (user.bio if user.bio else "", user.username or "", user.first_name or "", user.last_name or "")
+
+request_timestamps = defaultdict(list)
+active_users = set()
 
 @app.on_message(filters.command("start") & filters.private)
 async def start(client, message):
     try:
         user_name = message.from_user.first_name
-        # Store user in MongoDB
         await store_user(message.from_user.id)
         start_message = (
-    f"✨ ʜᴇʟʟᴏ {user_name}! ✨\n\n"
-    "🤖 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ʙɪᴏ ʟɪɴᴋ ᴍᴏɴɪᴛᴏʀ ʙᴏᴛ! 🛡️\n"
-    "ɪ ʜᴇʟᴘ ᴋᴇᴇᴘ ᴛᴇʟᴇɢʀᴀᴍ ɢʀᴏᴜᴘꜱ ᴄʟᴇᴀɴ ʙʏ 🕵️‍♂️ ᴍᴏɴɪᴛᴏʀɪɴɢ ᴜꜱᴇʀ ʙɪᴏꜱ ꜰᴏʀ ᴜɴᴀᴜᴛʜᴏʀɪᴢᴇᴅ ʟɪɴᴋꜱ. 🔗\n\n"
-    "⚙️ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄᴏɴꜰɪɢᴜʀᴇ ᴍᴇ ᴛᴏ ⚠️ ᴡᴀʀɴ | 🔇 ᴍᴜᴛᴇ | 🚫 ʙᴀɴ ᴜꜱᴇʀꜱ ᴡɪᴛʜ ʙɪᴏ ʟɪɴᴋꜱ.\n\n"
-    "👇 ᴜꜱᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴꜱ ʙᴇʟᴏᴡ ᴛᴏ ᴊᴏɪɴ ᴏᴜʀ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ᴏʀ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ!"
-)
-
+            f"✨ ʜᴇʟʟᴏ {user_name}! ✨\n\n"
+            "🤖 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ʙɪᴏ ʟɪɴᴋ ᴍᴏɴɪᴛᴏʀ ʙᴏᴛ! 🛡️\n"
+            "ɪ ʜᴇʟᴘ ᴋᴇᴇᴘ ᴛᴇʟᴇɢʀᴀᴍ ɢʀᴏᴜᴘꜱ ᴄʟᴇᴀɴ ʙʏ 🕵️‍♂️ ᴍᴏɴɪᴛᴏʀɪɴɢ ᴜꜱᴇʀ ʙɪᴏꜱ ꜰᴏʀ ᴜɴᴀᴜᴛʜᴏʀɪᴢᴇᴅ ʟɪɴᴋꜱ. 🔗\n\n"
+            "⚙️ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄᴏɴꜰɪɢᴜʀᴇ ᴍᴇ ᴛᴏ ⚠️ ᴡᴀʀɴ | 🔇 ᴍᴜᴛᴇ | 🚫 ʙᴀɴ ᴜꜱᴇʀꜱ ᴡɪᴛʜ ʙɪᴏ ʟɪɴᴋꜱ.\n\n"
+            "👇 ᴜꜱᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴꜱ ʙᴇʟᴏᴡ ᴛᴏ ᴊᴏɪɴ ᴏᴜʀ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ᴏʀ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ!"
+        )
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ 📣", url="https://t.me/UnfilteredZone")],
             [InlineKeyboardButton("ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ ➕", url=f"https://t.me/{(await client.get_me()).username}?startgroup=true")]
@@ -106,10 +117,8 @@ async def callback_handler(client, callback_query):
             await callback_query.message.delete()
             return
 
-        settings = await get_group_settings(chat_id)
-
         if data == "back":
-            current_punishment = settings["punishment"]
+            current_punishment = (await get_group_settings(chat_id))["punishment"]
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("Warn", callback_data="warn")],
                 [InlineKeyboardButton("Mute ✅" if current_punishment == "mute" else "Mute", callback_data="mute"), 
@@ -122,7 +131,7 @@ async def callback_handler(client, callback_query):
             return
 
         if data == "warn":
-            current_warning_limit = settings["warning_limit"]
+            current_warning_limit = (await get_group_settings(chat_id))["warning_limit"]
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("3 ✅" if current_warning_limit == 3 else "3", callback_data="warn_3"), 
                  InlineKeyboardButton("4 ✅" if current_warning_limit == 4 else "4", callback_data="warn_4"),
@@ -133,6 +142,7 @@ async def callback_handler(client, callback_query):
             return
 
         if data in ["mute", "ban", "delete"]:
+            settings = await get_group_settings(chat_id)
             settings["type"] = "warn"
             settings["punishment"] = data
             await update_group_settings(chat_id, settings)
@@ -147,6 +157,7 @@ async def callback_handler(client, callback_query):
             await callback_query.answer()
         elif data.startswith("warn_"):
             num_warnings = int(data.split("_")[1])
+            settings = await get_group_settings(chat_id)
             settings["type"] = "warn"
             settings["warning_limit"] = num_warnings
             await update_group_settings(chat_id, settings)
@@ -197,21 +208,53 @@ async def bot_added_to_group(client, message):
 
 @app.on_message(filters.group)
 async def check_bio(client, message):
-    try:
-        chat_id = message.chat.id
-        user_id = message.from_user.id
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    current_time = time.time()
 
-        user_full = await client.get_chat(user_id)
-        bio = user_full.bio if user_full.bio else ""
-        if user_full.username:
-            user_name = f"@{user_full.username} [<code>{user_id}</code>]"
-        else:
-            user_name = f"{user_full.first_name} {user_full.last_name} [<code>{user_id}</code>]" if user_full.last_name else f"{user_full.first_name} [<code>{user_id}</code>]"
+    # Throttle requests
+    request_timestamps[chat_id] = [t for t in request_timestamps[chat_id] if current_time - t < 60]
+    if len(request_timestamps[chat_id]) > 10:
+        print(f"DEBUG: Throttling bio check for chat_id {chat_id}")
+        return
+    request_timestamps[chat_id].append(current_time)
 
-        settings = await get_group_settings(chat_id)
-        await apply_punishment(client, message, user_id, user_name, bio, settings)
-    except Exception as e:
-        print(f"ERROR: Failed in check_bio: {e}")
+    # Check only new users
+    if user_id not in active_users:
+        active_users.add(user_id)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Use cached user info if available, refresh if too old
+                bio, username, first_name, last_name = get_cached_user_info(client, user_id)
+                if time.time() - get_cached_user_info.cache_info().hits > 300:
+                    get_cached_user_info.cache_clear()
+                    user_full = await client.get_chat(user_id)
+                    bio = user_full.bio if user_full.bio else ""
+                    username = user_full.username or ""
+                    first_name = user_full.first_name or ""
+                    last_name = user_full.last_name or ""
+
+                user_name = f"@{username} [<code>{user_id}</code>]" if username else \
+                           f"{first_name} {last_name} [<code>{user_id}</code>]" if last_name else \
+                           f"{first_name} [<code>{user_id}</code>]"
+                settings = await get_group_settings(chat_id)
+                await apply_punishment(client, message, user_id, user_name, bio, settings)
+                break
+            except errors.FloodWait as e:
+                wait_time = e.value
+                print(f"DEBUG: FloodWait {wait_time} seconds, attempt {attempt + 1}/{max_retries}")
+                if attempt < max_retries - 1:
+                    await sleep(wait_time * (2 ** attempt))  # Exponential backoff
+                else:
+                    print(f"ERROR: Max retries reached for user_id {user_id}")
+                    break
+            except Exception as e:
+                print(f"ERROR: Failed in check_bio for user_id {user_id}: {e}")
+                break
+    # Clear inactive users every 5 minutes
+    if time.time() % 300 == 0:
+        active_users.clear()
 
 if __name__ == "__main__":
     print("DEBUG: Starting bot...")
