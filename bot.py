@@ -256,6 +256,15 @@ async def check_bio(client, message):
     if time.time() % 300 == 0:
         active_users.clear()
 
+# Add these lines to bot.py
+@app.on_message(filters.command("broadcast") & (filters.group | filters.private))
+async def broadcast_start(client, message):
+    await broadcast_command(client, message)
+
+@app.on_callback_query(filters.regex(r'^broadcast_'))
+async def broadcast_callback_handler(client, callback_query):
+    await broadcast_callback(client, callback_query)
+
 if __name__ == "__main__":
     print("DEBUG: Starting bot...")
     try:
