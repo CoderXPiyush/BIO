@@ -2,7 +2,6 @@ from pyrogram import Client, filters, enums, errors
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 from database import get_group_settings, update_group_settings, store_user
 from punishments import apply_punishment, warnings
-from promo import broadcast_message
 from dotenv import load_dotenv
 import os
 
@@ -13,13 +12,11 @@ load_dotenv()
 print(f"DEBUG: API_ID = {os.getenv('API_ID')}")
 print(f"DEBUG: API_HASH = {os.getenv('API_HASH')}")
 print(f"DEBUG: BOT_TOKEN = {os.getenv('BOT_TOKEN')}")
-print(f"DEBUG: OWNER_ID = {os.getenv('OWNER_ID')}")
 
 # User Client setup
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
-owner_id = os.getenv("OWNER_ID")
 
 # Validate credentials
 if not all([api_id, api_hash, bot_token]):
@@ -30,12 +27,6 @@ try:
     api_id = int(api_id)  # Ensure API_ID is an integer
 except ValueError:
     print("ERROR: API_ID must be an integer")
-    exit(1)
-
-try:
-    owner_id = int(owner_id) if owner_id else None  # Allow OWNER_ID to be optional for other functionality
-except ValueError:
-    print("ERROR: OWNER_ID must be an integer")
     exit(1)
 
 app = Client("my_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
@@ -78,29 +69,6 @@ async def start(client, message):
         )
     except Exception as e:
         print(f"ERROR: Failed in start handler: {e}")
-
-@app.on_message(filters.command("broadcast") & filters.private)
-async def broadcast(client, message):
-    try:
-        if not owner_id or str(message.from_user.id) != str(owner_id):
-            await message.reply_text("❌ Only the bot owner can use this command.", parse_mode=enums.ParseMode.HTML)
-            return
-
-        if len(message.command) < 2:
-            await message.reply_text("Please provide a message to broadcast.\nExample: /broadcast Hello everyone!", parse_mode=enums.ParseMode.HTML)
-            return
-
-        broadcast_text = " ".join(message.command[1:])
-        await message.reply_text("Starting broadcast...", parse_mode=enums.ParseMode.HTML)
-        
-        success_count, failure_count = await broadcast_message(client, broadcast_text)
-        await message.reply_text(
-            f"Broadcast completed.\nSuccess: {success_count}\nFailures: {failure_count}",
-            parse_mode=enums.ParseMode.HTML
-        )
-    except Exception as e:
-        print(f"ERROR: Failed in broadcast handler: {e}")
-        await message.reply_text("An error occurred during broadcast.", parse_mode=enums.ParseMode.HTML)
 
 @app.on_message(filters.group & filters.command("config"))
 async def configure(client, message):
@@ -150,102 +118,112 @@ async def callback_handler(client, callback_query):
                 [InlineKeyboardButton("Warn", callback_data="warn")],
                 [InlineKeyboardButton("Mute ✅" if current_punishment == "mute" else "Mute", callback_data="mute"), 
                  InlineKeyboardButton("Ban ✅" if current_punishment == "ban" else "Ban", callback_data="ban"),
-                 InlineKeyboardButton("Delete ✅" if currentesie.py`).
+                 InlineKeyboardButton("Delete ✅" if current_punishment == "delete" else "Delete", callback_data="delete")],
+                [InlineKeyboardButton("Close", callback_data="close")]
+            ])
+            await callback_query.message.edit_text("<b>Select punishment for users who have links in their bio:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
+            await callback_query.answer()
+            return
 
----
+        if data == "warn":
+            current_warning_limit = settings["warning_limit"]
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("3 ✅" if current_warning_limit == 3 else "3", callback_data="warn_3"), 
+                 InlineKeyboardButton("4 ✅" if current_warning_limit == 4 else "4", callback_data="warn_4"),
+                 InlineKeyboardButton("5 ✅" if current_warning_limit == 5 else "5", callback_data="warn_5")],
+                [InlineKeyboardButton("Back", callback_data="back"), InlineKeyboardButton("Close", callback_data="close")]
+            ])
+            await callback_query.message.edit_text("<b>Select the number of warnings before punishment:</b>", reply_markup=keyboard, parse_mode=enums.ParseMode.HTML)
+            return
 
-### 2. Database Module (`database.py`)
+        if data in ["mute", "ban", "delete"]:
+            settings["type"] = "warn"
+            settings["punishment"] = data
+            await update_group_settings(chat_id, settings)
+            selected_keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("Warn", callback_data="warn")],
+                [InlineKeyboardButton("Mute ✅" if data == "mute" else "Mute", callback_data="mute"), 
+                 InlineKeyboardButton("Ban ✅" if data == "ban" else "Ban", callback_data="ban"),
+                 InlineKeyboardButton("Delete ✅" if data == "delete" else "Delete", callback_data="delete")],
+                [InlineKeyboardButton("Close", callback_data="close")]
+            ])
+            await callback_query.message.edit_text("<b>Punishment selected:</b>", reply_markup=selected_keyboard, parse_mode=enums.ParseMode.HTML)
+            await callback_query.answer()
+        elif data.startswith("warn_"):
+            num_warnings = int(data.split("_")[1])
+            settings["type"] = "warn"
+            settings["warning_limit"] = num_warnings
+            await update_group_settings(chat_id, settings)
+            selected_keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("3 ✅" if num_warnings == 3 else "3", callback_data="warn_3"), 
+                 InlineKeyboardButton("4 ✅" if num_warnings == 4 else "4", callback_data="warn_4"),
+                 InlineKeyboardButton("5 ✅" if num_warnings == 5 else "5", callback_data="warn_5")],
+                [InlineKeyboardButton("Back", callback_data="back"), InlineKeyboardButton("Close", callback_data="close")]
+            ])
+            await callback_query.message.edit_text(f"<b>Warning limit set to {num_warnings}</b>", reply_markup=selected_keyboard, parse_mode=enums.ParseMode.HTML)
+            await callback_query.answer()
+        elif data.startswith("unmute_"):
+            target_user_id = int(data.split("_")[1])
+            target_user = await client.get_chat(target_user_id)
+            target_user_name = f"{target_user.first_name} {target_user.last_name}" if target_user.last_name else target_user.first_name
+            try:
+                await client.restrict_chat_member(chat_id, target_user_id, ChatPermissions(can_send_messages=True))
+                await callback_query.message.edit(f"{target_user_name} [<code>{target_user_id}</code>] has been unmuted", parse_mode=enums.ParseMode.HTML)
+            except errors.ChatAdminRequired:
+                await callback_query.message.edit("I don't have permission to unmute users.")
+            await callback_query.answer()
+        elif data.startswith("unban_"):
+            target_user_id = int(data.split("_")[1])
+            target_user = await client.get_chat(target_user_id)
+            target_user_name = f"{target_user.first_name} {target_user.last_name}" if target_user.last_name else target_user.first_name
+            try:
+                await client.unban_chat_member(chat_id, target_user_id)
+                await callback_query.message.edit(f"{target_user_name} [<code>{target_user_id}</code>] has been unbanned", parse_mode=enums.ParseMode.HTML)
+            except errors.ChatAdminRequired:
+                await callback_query.message.edit("I don't have permission to unban users.")
+            await callback_query.answer()
+    except Exception as e:
+        print(f"ERROR: Failed in callback_handler: {e}")
+        await callback_query.answer("An error occurred", show_alert=True)
 
-Unchanged, handles MongoDB interactions.
-
-<xaiArtifact artifact_id="a22aa3d0-dbb5-40de-bb35-bc48a4bf94c1" artifact_version_id="bf84b5a6-08f2-482d-9d3b-e183df107ade" title="database.py" contentType="text/python">
-```python
-from pymongo import MongoClient
-from bson import Int64
-from datetime import datetime
-from dotenv import load_dotenv
-import os
-import pymongo.errors
-
-# Load environment variables from .env file
-load_dotenv()
-
-# MongoDB setup
-mongo_uri = os.getenv("MONGO_URI")
-if not mongo_uri:
-    print("ERROR: MONGO_URI not found in .env file")
-    raise ValueError("MONGO_URI is required")
-
-print(f"DEBUG: Connecting to MongoDB with URI: {mongo_uri}")
-
-try:
-    mongo_client = MongoClient(mongo_uri)
-    # Test connection
-    mongo_client.server_info()  # Raises ConnectionFailure if unreachable
-    print("DEBUG: MongoDB connection successful")
-except pymongo.errors.ConnectionFailure as e:
-    print(f"ERROR: Failed to connect to MongoDB: {str(e)}")
-    raise
-except pymongo.errors.ConfigurationError as e:
-    print(f"ERROR: Invalid MongoDB URI: {str(e)}")
-    raise
-
-db = mongo_client["telegram_bot"]
-groups_collection = db["groups"]
-users_collection = db["users"]
-
-default_warning_limit = 3
-default_punishment = "mute"
-default_punishment_set = {"type": "warn", "warning_limit": default_warning_limit, "punishment": default_punishment}
-
-async def get_group_settings(chat_id):
-    """Retrieve group settings from MongoDB, or return default if not found."""
+@app.on_message(filters.group & filters.new_chat_members)
+async def bot_added_to_group(client, message):
     try:
-        group = groups_collection.find_one({"chat_id": Int64(chat_id)})
-        if group:
-            return {
-                "type": group.get("type", "warn"),
-                "warning_limit": group.get("warning_limit", default_warning_limit),
-                "punishment": group.get("punishment", default_punishment)
-            }
-        return default_punishment_set
-    except pymongo.errors.PyMongoError as e:
-        print(f"ERROR: Failed to get group settings for chat_id {chat_id}: {str(e)}")
-        return default_punishment_set
+        chat_id = message.chat.id
+        bot_id = (await client.get_me()).id
+        for member in message.new_chat_members:
+            if member.id == bot_id:
+                settings = await get_group_settings(chat_id)
+                await update_group_settings(chat_id, settings)
+                await message.reply_text("Thank you for adding me! I'll monitor user bios for links. Admins can configure punishments with /config.")
+    except Exception as e:
+        print(f"ERROR: Failed in bot_added_to_group: {e}")
 
-async def update_group_settings(chat_id, settings):
-    """Update group settings in MongoDB."""
-    required_keys = ["type", "warning_limit", "punishment"]
-    if not all(key in settings for key in required_keys):
-        print(f"ERROR: Settings missing required keys: {required_keys}")
-        return
-
+@app.on_message(filters.group)
+async def check_bio(client, message):
     try:
-        groups_collection.update_one(
-            {"chat_id": Int64(chat_id)},
-            {"$set": {
-                "chat_id": Int64(chat_id),
-                "type": settings["type"],
-                "warning_limit": settings["warning_limit"],
-                "punishment": settings["punishment"]
-            }},
-            upsert=True
-        )
-        print(f"DEBUG: Updated settings for chat_id {chat_id}")
-    except pymongo.errors.PyMongoError as e:
-        print(f"ERROR: Failed to update group settings for chat_id {chat_id}: {str(e)}")
+        chat_id = message.chat.id
+        user_id = message.from_user.id
 
-async def store_user(user_id):
-    """Store a user who started the bot in MongoDB."""
+        user_full = await client.get_chat(user_id)
+        bio = user_full.bio if user_full.bio else ""
+        if user_full.username:
+            user_name = f"@{user_full.username} [<code>{user_id}</code>]"
+        else:
+            user_name = f"{user_full.first_name} {user_full.last_name} [<code>{user_id}</code>]" if user_full.last_name else f"{user_full.first_name} [<code>{user_id}</code>]"
+
+        settings = await get_group_settings(chat_id)
+        await apply_punishment(client, message, user_id, user_name, bio, settings)
+    except Exception as e:
+        print(f"ERROR: Failed in check_bio: {e}")
+
+if __name__ == "__main__":
+    print("DEBUG: Starting bot...")
     try:
-        users_collection.update_one(
-            {"user_id": Int64(user_id)},
-            {"$set": {
-                "user_id": Int64(user_id),
-                "started_at": datetime.utcnow()
-            }},
-            upsert=True
-        )
-        print(f"DEBUG: Stored user_id {user_id}")
-    except pymongo.errors.PyMongoError as e:
-        print(f"ERROR: Failed to store user_id {user_id}: {str(e)}")
+        app.run()
+    except errors.AuthKeyUnregistered:
+        print("ERROR: Invalid API_ID, API_HASH, or BOT_TOKEN. Please verify credentials.")
+        exit(1)
+    except Exception as e:
+        print(f"ERROR: Failed to start bot: {str(e)}")
+        exit(1)
