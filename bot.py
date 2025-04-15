@@ -62,7 +62,7 @@ async def get_warning_keyboard(settings):
         [InlineKeyboardButton("3 ✅" if current_warning_limit == 3 else "3", callback_data="warn_3"),
          InlineKeyboardButton("4 ✅" if current_warning_limit == 4 else "4", callback_data="warn_4"),
          InlineKeyboardButton("5 ✅" if current_warning_limit == 5 else "5", callback_data="warn_5")],
-        [InlineKeyboardButton("Back", callback_data="back"), InlineKeyboardButton("Close", callback_data="close")]
+        [InlineKeyboardButton("ʙᴀᴄᴋ", callback_data="back"), InlineKeyboardButton("✯ ᴄʟᴏsᴇ ✯", callback_data="close")]
     ])
 
 @app.on_message(filters.command("start") & filters.private)
